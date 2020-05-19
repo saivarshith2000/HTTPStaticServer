@@ -5,12 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Static HTTP Server</title>
 </head>
-<body>
+<body style="margin: 0px; padding: 0px">
+    <p style="text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 36px;
+            position: fixed;
+            margin-top: 0;
+            width: 100%;
+            height: 50px;
+            padding: 20px;
+            -webkit-box-shadow: 0px 5px 15px 5px rgba(0,0,0,0.1);
+            -moz-box-shadow: 0px 5px 15px 5px rgba(0,0,0,0.1);
+            box-shadow: 0px 5px 15px 5px rgba(0,0,0,0.1);
+            background-color: white"
+       >
+       Static HTTP Server written in single C file
+    </p>
     <div style="width: 60%; margin: auto">
-        <p style="text-align: center; font-family: Arial, Helvetica, sans-serif; font-size: 36px">
-            Static HTTP Server written in single C file
-        </p>
-        <div style="padding: 10px">
+        <div style="padding: 10px; padding-top: 100px">
             <p style="font-size: 20px; font-weight: bold">What can it do ?</p>
             <p style="font-size: 18px">Runs on POSIX compliant systems</p>
             <p style="font-size: 18px">HTTP GET</p>
@@ -29,10 +41,10 @@
             <p style="font-size: 20px; font-weight: bold">Command Line Arguments</p>
             <p style="font-size: 18px; background-color: #f0f0f0; padding: 20px; border-radius: 10px">
                 <code>Usage: %s [-p port number] [-h html directory] [-t thread pool size]<br>
-                    -p&emsp;&emsp;Server port (Default 8000) [OPTIONAL]<br>
+                    -p&emsp;&emsp;Server port (Default 8000) [OPTIONAL]<br><br>
                     -h&emsp;&emsp;HTML files in this directory are served.This directory must be in the same directory as the server executable
-                     and don't add './' to the directory name! (Default 'html') [OPTIONAL]<br>
-                    -t&emsp;&emsp;pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]<br>
+                    and don't add './' to the directory name! (Default 'html') [OPTIONAL]<br><br>
+                    -t&emsp;&emsp;pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]<br><br>
                     -h&emsp;&emsp;Shows available arguments<br>
                 </code></p>
         </div>

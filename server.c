@@ -25,11 +25,11 @@ const int default_poolsize = 8;
 #define HTTP_BASE_OK "HTTP/1.1 200 OK\r\n"\
                 "Server: Single File Server\r\n"\
                 "Connection: Closed\r\n"\
-                "Content-Type:"\
+                "Content-Type: "\
 
 #define HTTP_404 "HTTP/1.1 404 Not Found\r\n"\
                  "Server: Single File Server\r\n"\
-                 "Content-Type: text/html; charset=iso-8859-1\r\n"\
+                 "Content-Type: text/html; charset=utf-8\r\n"\
                  "Connection: Closed\r\n\r\n"
 
 #define HELPSTRING "Usage: %s [-p port number] [-h html directory] [-t thread pool size]\n"\
@@ -246,10 +246,9 @@ char *get_file_name(char *request)
 /* Returns filetype based on file extension */
 enum filetype get_filetype(char *filename)
 {
-    char name[strlen(filename)];
-    char ext[8];
-    sscanf(filename, "%s.%s", name, ext);
-    printf("exts is %s\n", ext);
+    char *ext = strchr(filename, '.');
+    ext = strchr(filename, '.');
+    ext++;
     if(strcmp(ext, "html") == 0)
         return HTML;
     else if(strcmp(ext, "css") == 0)
@@ -271,21 +270,15 @@ char *get_response_header(char *filename)
     char *response_header = calloc(1, HTTP_BASE_OK_len + 32);
     switch(ft) {
         case HTML:
-            sprintf(response_header, "%stext/html; charset=iso-8859-1\r\n\r\n", HTTP_BASE_OK);
+            sprintf(response_header, "%stext/html; charset=utf-8\r\n\r\n", HTTP_BASE_OK);
             break;
         case CSS:
-            sprintf(response_header, "%stext/css; charset=iso-8859-1\r\n\r\n", HTTP_BASE_OK);
+            sprintf(response_header, "%stext/css; charset=utf-8\r\n\r\n", HTTP_BASE_OK);
             break;
         case TXT:
-            sprintf(response_header, "%stext/plain; charset=iso-8859-1\r\n\r\n", HTTP_BASE_OK);
+            sprintf(response_header, "%stext/plain; charset=utf-8\r\n\r\n", HTTP_BASE_OK);
             break;
-        case JPG:
-            sprintf(response_header, "%simage/jpg\r\n\r\n", HTTP_BASE_OK);
-            break;
-        case PNG:
-            sprintf(response_header, "%smage/png\r\n\r\n", HTTP_BASE_OK);
-            break;
-        case UNKNOWN:
+        default:
             sprintf(response_header, "%sapplication/octet-stream\r\n\r\n", HTTP_BASE_OK);
             break;
     }
@@ -331,7 +324,6 @@ void* handle_connection(void *args)
         /* attempt to read html file */
         fullpath = calloc(1, strlen(html_dir) + strlen(filename) + 4);
         sprintf(fullpath, "./%s%s", html_dir, filename);
-        printf("fullpath: %s\n", fullpath);
         htmlfd = open(fullpath, O_RDONLY);
         if(htmlfd < 0) {
             bw = write(clientfd, HTTP_404, HTTP_404_len);
@@ -342,16 +334,17 @@ void* handle_connection(void *args)
             if(bw <= 0)
                 goto close_clientfd;
             while((br = read(htmlfd, filebuffer, FILE_BUFFER_SIZE-1))) {
+                filebuffer[br] = '\0';
                 bw = write(clientfd, filebuffer, br);
                 if(bw <= 0)
                     goto close_clientfd;
                 memset(filebuffer, 0, bw);
             }
+            close(htmlfd);
         }
 close_clientfd:
         free(fullpath);
         free(filename);
-        close(htmlfd);
         close(clientfd);
     }
     free(filebuffer);
