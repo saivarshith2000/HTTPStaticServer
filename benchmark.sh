@@ -19,10 +19,13 @@ fi
 # start time
 start=`date +%s%N`
 
+test_url="http://localhost:$port/$url"
+echo "Benchmarking url: $test_url"
+
 # make max_requests
 while [[ $i -le $max_requests ]]
 do
-    if curl -s "http://localhost:$port/" > /dev/null; then
+    if curl -s $test_url > /dev/null; then
         let i=i+1
     else
         echo "Curl failed! Make sure you have curl installed and the server is running on $port !"

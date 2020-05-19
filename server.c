@@ -278,6 +278,9 @@ char *get_response_header(char *filename)
         case TXT:
             sprintf(response_header, "%stext/plain; charset=utf-8\r\n\r\n", HTTP_BASE_OK);
             break;
+        case JPG:
+            sprintf(response_header, "%simage/jpeg\r\n\r\n", HTTP_BASE_OK);
+            break;
         default:
             sprintf(response_header, "%sapplication/octet-stream\r\n\r\n", HTTP_BASE_OK);
             break;
@@ -330,7 +333,7 @@ void* handle_connection(void *args)
             goto close_clientfd;
         } else {
             response_header = get_response_header(filename);
-            bw = write(clientfd, response_header, HTTP_BASE_OK_len + 32);
+            bw = write(clientfd, response_header, strlen(response_header));
             if(bw <= 0)
                 goto close_clientfd;
             while((br = read(htmlfd, filebuffer, FILE_BUFFER_SIZE-1))) {

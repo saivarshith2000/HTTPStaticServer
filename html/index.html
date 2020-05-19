@@ -1,45 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Static HTTP Server</title>
-</head>
-<body style="margin: 0px; padding: 0px">
-    <p style="text-align: center;
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 36px;
-            position: fixed;
-            margin-top: 0;
-            width: 100%;
-            height: 50px;
-            padding: 20px;
-            -webkit-box-shadow: 0px 5px 15px 5px rgba(0,0,0,0.1);
-            -moz-box-shadow: 0px 5px 15px 5px rgba(0,0,0,0.1);
-            box-shadow: 0px 5px 15px 5px rgba(0,0,0,0.1);
-            background-color: white"
-       >
-       Static HTTP Server written in single C file
-    </p>
-    <div style="width: 60%; margin: auto">
-        <div style="padding: 10px; padding-top: 100px">
-            <p style="font-size: 20px; font-weight: bold">What can it do ?</p>
-            <p style="font-size: 18px">Runs on POSIX compliant systems</p>
-            <p style="font-size: 18px">HTTP GET</p>
-            <p style="font-size: 18px">Multithreading with thread pool</p>
-            <p style="font-size: 18px">Single File !</p>
-        </div>
-        <div style="padding: 10px">
-            <p style="font-size: 20px; font-weight: bold">How to run it ?</p>
-            <p style="font-size: 18px">1. You'll need a C compiler and make</p>
-            <p style="font-size: 18px">2. <code>clone</code> this repository and <code>cd</code> into it.</p>
-            <p style="font-size: 18px">3. In the root of this repository, run <code>make</code></p>
-            <p style="font-size: 18px">4. Place your html content in the public directory and run the
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Static HTTP Server</title>
+    </head>
+    <body style="margin: 0px; padding: 0px">
+        <div style="width: 60%; margin: auto">
+            <p style="text-align: center;
+                      font-family: Arial, Helvetica, sans-serif;
+                      font-size: 36px;"
+               >
+               Static HTTP Server written in single C file
+            </p>
+            <div style="padding: 10px; padding-bottom: 0px">
+                <p style="font-size: 20px; font-weight: bold">What can it do ?</p>
+                <p style="font-size: 18px">Runs on POSIX compliant systems</p>
+                <p style="font-size: 18px">HTTP GET</p>
+                <p style="font-size: 18px">Multithreading with thread pool</p>
+                <p style="font-size: 18px">Single File !</p>
+            </div>
+            <div style="padding: 10px; padding-bottom: 0px">
+                <p style="font-size: 20px; font-weight: bold">How to run it ?</p>
+                <p style="font-size: 18px">1. You'll need a C compiler and make</p>
+                <p style="font-size: 18px">2. <code>clone</code> this repository and <code>cd</code> into it.</p>
+                <p style="font-size: 18px">3. In the root of this repository, run <code>make</code></p>
+                <p style="font-size: 18px">4. Place your html content in the public directory and run the
                 <code>server</code> executable</p>
-        </div>
-        <div style="padding: 10px">
-            <p style="font-size: 20px; font-weight: bold">Command Line Arguments</p>
-            <p style="font-size: 18px; background-color: #f0f0f0; padding: 20px; border-radius: 10px">
+            </div>
+            <div style="padding: 10px">
+                <p style="font-size: 20px; font-weight: bold">Command Line Arguments</p>
+                <p style="font-size: 18px; background-color: #f0f0f0; padding: 20px; border-radius: 10px">
                 <code>Usage: %s [-p port number] [-h html directory] [-t thread pool size]<br>
                     -p&emsp;&emsp;Server port (Default 8000) [OPTIONAL]<br><br>
                     -h&emsp;&emsp;HTML files in this directory are served.This directory must be in the same directory as the server executable
@@ -47,7 +38,7 @@
                     -t&emsp;&emsp;pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]<br><br>
                     -h&emsp;&emsp;Shows available arguments<br>
                 </code></p>
-        </div>
-</body>
+            </div>
+    </body>
 </html>
-</div>
+        </div>
