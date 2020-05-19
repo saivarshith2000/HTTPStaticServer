@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -g
+CFLAGS = -Wall -lpthread
 
 server: server.c
 	${CC} ${CFLAGS} server.c -o server
@@ -7,6 +7,10 @@ server: server.c
 run: server
 	./server
 
+debug: server.c
+	${CC} -g ${CFLAGS} server.c -o debug
+
+
 clean:
-	rm server
+	rm -rf server debug
 
