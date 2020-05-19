@@ -18,17 +18,23 @@
             <p style="font-size: 20px">Single File !</p>
         </div>
         <div style="padding: 10px">
-            <p style="font-size: 24px; font-weight: bold">How to run it ?</p>
-            <p style="font-size: 20px">1. You'll need a C compiler and make</p>
-            <p style="font-size: 20px">2. <code>clone</code> this repository and <code>cd</code> into it.</p>
-            <p style="font-size: 20px">3. In the root of this repository, run <code>make</code></p>
-            <p style="font-size: 20px">4. Place your html content in the public directory and run the
+            <p style="font-size: 20px; font-weight: bold">How to run it ?</p>
+            <p style="font-size: 18px">1. You'll need a C compiler and make</p>
+            <p style="font-size: 18px">2. <code>clone</code> this repository and <code>cd</code> into it.</p>
+            <p style="font-size: 18px">3. In the root of this repository, run <code>make</code></p>
+            <p style="font-size: 18px">4. Place your html content in the public directory and run the
                 <code>server</code> executable</p>
         </div>
         <div style="padding: 10px">
-            <p style="font-size: 24px; font-weight: bold">Command Line Arguments</p>
-            <p style="font-size: 20px">
-                <code>Usage: ./server [-p port number] [-s static directory] [-t thread pool size]</code></p>
+            <p style="font-size: 20px; font-weight: bold">Command Line Arguments</p>
+            <p style="font-size: 18px; background-color: silver; padding: 10px">
+                <code>Usage: %s [-p port number] [-h html directory] [-t thread pool size]<br>
+                    -p&emsp;&emsp;Server port (Default 8000) [OPTIONAL]<br> 
+                    -h&emsp;&emsp;HTML files in this directory are served.This directory must be in the same directory as the server executable
+                     and don't add './' to the directory name! (Default 'html') [OPTIONAL]<br> 
+                    -t&emsp;&emsp;pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]<br> 
+                    -h&emsp;&emsp;Shows available arguments<br> 
+                </code></p>
         </div>
 </body>
 </html>

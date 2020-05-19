@@ -22,23 +22,27 @@ const int default_poolsize = 8;
 #define default_static "html";
 
 /* HTTP Response Headers */
-#define HTTP_OK "HTTP/1.1 200 OK\r\n"\
+#define HTTP_TEXT_OK "HTTP/1.1 200 OK\r\n"\
                 "Server: Single File Server\r\n"\
                 "Content-Type: text/html; charset=iso-8859-1\r\n"\
                 "Connection: Closed\r\n\r\n"
 
-#define HTTP_404 "HTTP/1.1 404 Not Found\r\n"\
+#define HTTP_IMG_OK "HTTP/1.1 200 OK\r\n"\
                 "Server: Single File Server\r\n"\
-                "Content-Type: text/html; charset=iso-8859-1\r\n"\
-                "Connection: Closed\r\n\r\n"\
-                "Requested Page Not Found :)\r\n"
+                "Content-Type: application/octet-stream\r\n"\
+                "Connection: Closed\r\n\r\n"
+
+#define HTTP_404 "HTTP/1.1 404 Not Found\r\n"\
+                 "Server: Single File Server\r\n"\
+                 "Content-Type: text/html; charset=iso-8859-1\r\n"\
+                 "Connection: Closed\r\n\r\n"
 
 #define HELPSTRING "Usage: %s [-p port number] [-h html directory] [-t thread pool size]\n"\
-                   "-p\t\tServer port (Default 8000) [OPTIONAL]\n"\
-                   "-h\t\tHTML Directory. HTML files in this directory are served."\
-                   "This directory must be in the same directory as the server executable and don't add './' to the directory name! (Default 'html') [OPTIONAL]\n"\
-                   "-t\t\tThread pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]\n"\
-                   "-h\t\tShows available arguments\n"
+                   "\t-p\t\tServer port (Default 8000) [OPTIONAL]\n"\
+                   "\t-h\t\tHTML files in this directory are served.This directory must be in the same directory as the server executable\n"\
+                   "\t\t\tand don't add './' to the directory name! (Default 'html') [OPTIONAL]\n"\
+                   "\t-t\t\tThread pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]\n"\
+                   "\t-h\t\tShows available arguments\n"
 
 struct threadpool {
     pthread_t *workers;
@@ -49,7 +53,6 @@ typedef struct threadpool threadpool;
 
 struct qnode {
     int clientfd;
-    struct sockaddr_in client_addr;
     struct qnode *next;
 };
 typedef struct qnode qnode;
@@ -80,14 +83,13 @@ queue *create_queue(int capacity)
 }
 
 /* Enqueues a new connection */
-int enqueue(queue *q, int clientfd, struct sockaddr_in client_addr)
+int enqueue(queue *q, int clientfd)
 {
     if(q->size == q->capacity) {
         return -1;
     }
     qnode *node = calloc(1, sizeof(qnode));
     node->clientfd = clientfd;
-    node->client_addr = client_addr;
     node->next = NULL;
     if(q->size == 0) {
         q->head = node;
@@ -107,9 +109,9 @@ qnode *dequeue(queue *q)
 {
     if(q->size == 0)
         return NULL;
-    q->size--;
     qnode *retnode = q->head;
     q->head = q->head->next;
+    q->size--;
     return retnode;
 }
 
@@ -232,16 +234,29 @@ char *get_file_name(char *request)
     return filename;
 }
 
+/* Returns 1 is file is a jpg/jpeg, 2 if png and 0 otherwise (based on extension) */
+int is_image(char *filename)
+{
+    char name[strlen(filename)];
+    char ext[8];
+    sscanf(filename, "%s.%s", name, ext);
+    if(strcmp(ext, "jpg") == 0 || strcmp(ext, "jpeg") == 0)
+        return 1;
+    else if (strcmp(ext, "png") == 0)
+        return 2;
+    return 0;
+}
+
 /* Thread function that handles a single client in a blocking fashion. This function takes no arguments.
  * The connection queue pointer is global and mutex locks and condition variables are global.
  */
 void* handle_connection(void *args)
 {
     sleep(1);
-    int clientfd, htmlfd;
-    struct sockaddr_in client_addr;
+    int clientfd, htmlfd, imgtype;
     char buffer[REQUEST_BUFFER_SIZE];
-    char *fullpath, *filename, *filebuffer;
+    char *fullpath, *filename;
+    char *filebuffer = calloc(1, FILE_BUFFER_SIZE);
     qnode *node;
     int br,bw;
     while(is_running) {
@@ -254,7 +269,6 @@ void* handle_connection(void *args)
             continue;
 
         clientfd = node->clientfd;
-        client_addr = node->client_addr;
         free(node);
 
         br = read(clientfd, buffer, REQUEST_BUFFER_SIZE-1);
@@ -274,14 +288,15 @@ void* handle_connection(void *args)
         sprintf(fullpath, "./%s%s", html_dir, filename);
         printf("fullpath: %s\n", fullpath);
         htmlfd = open(fullpath, O_RDONLY);
-        free(fullpath);
-        free(filename);
         if(htmlfd < 0) {
             bw = write(clientfd, HTTP_404, sizeof(HTTP_404));
             goto close_clientfd;
         } else {
-            filebuffer = calloc(1, FILE_BUFFER_SIZE);
-            bw = write(clientfd, HTTP_OK, sizeof(HTTP_OK));
+            imgtype = is_image(filename);
+            if(imgtype)
+                bw = write(clientfd, HTTP_IMG_OK, strlen(HTTP_IMG_OK));
+            else
+                bw = write(clientfd, HTTP_TEXT_OK, strlen(HTTP_TEXT_OK));
             if(bw <= 0)
                 goto close_clientfd;
             while((br = read(htmlfd, filebuffer, FILE_BUFFER_SIZE-1))) {
@@ -290,12 +305,14 @@ void* handle_connection(void *args)
                     goto close_clientfd;
                 memset(filebuffer, 0, bw);
             }
-            free(filebuffer);
         }
-        close(htmlfd);
 close_clientfd:
+        free(fullpath);
+        free(filename);
+        close(htmlfd);
         close(clientfd);
     }
+    free(filebuffer);
     return NULL;
 }
 
@@ -391,9 +408,10 @@ int main(int argc, char *argv[])
         /* handle new connection */
         if(FD_ISSET(listenfd, &readset)) {
             memset(&client_addr, 0, sizeof(client_addr));
+            len = sizeof(client_addr);
             clientfd = accept(listenfd, (struct sockaddr*)&client_addr, &len);
             pthread_mutex_lock(&(pool->lock));
-            if(enqueue(connqueue, clientfd, client_addr) < 0){
+            if(enqueue(connqueue, clientfd) < 0){
                 printf("Connection capacity reached. Dropped new connection!\n");
                 close(clientfd);
                 pthread_mutex_unlock(&(pool->lock));
