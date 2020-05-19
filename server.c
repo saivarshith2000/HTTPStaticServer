@@ -22,15 +22,10 @@ const int default_poolsize = 8;
 #define default_static "html";
 
 /* HTTP Response Headers */
-#define HTTP_TEXT_OK "HTTP/1.1 200 OK\r\n"\
+#define HTTP_BASE_OK "HTTP/1.1 200 OK\r\n"\
                 "Server: Single File Server\r\n"\
-                "Content-Type: text/html; charset=iso-8859-1\r\n"\
-                "Connection: Closed\r\n\r\n"
-
-#define HTTP_IMG_OK "HTTP/1.1 200 OK\r\n"\
-                "Server: Single File Server\r\n"\
-                "Content-Type: application/octet-stream\r\n"\
-                "Connection: Closed\r\n\r\n"
+                "Connection: Closed\r\n"\
+                "Content-Type:"\
 
 #define HTTP_404 "HTTP/1.1 404 Not Found\r\n"\
                  "Server: Single File Server\r\n"\
@@ -43,6 +38,20 @@ const int default_poolsize = 8;
                    "\t\t\tand don't add './' to the directory name! (Default 'html') [OPTIONAL]\n"\
                    "\t-t\t\tThread pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]\n"\
                    "\t-h\t\tShows available arguments\n"
+
+const int HTTP_BASE_OK_len = strlen(HTTP_BASE_OK);
+const int HTTP_404_len = strlen(HTTP_404);
+
+
+/* Supported filetypes */
+enum filetype {
+    HTML,
+    CSS,
+    JPG,
+    PNG,
+    TXT,
+    UNKNOWN
+};
 
 struct threadpool {
     pthread_t *workers;
@@ -230,21 +239,57 @@ char *get_file_name(char *request)
 {
     char method[8] = {'\0'}, version[8] = {'\0'};
     char *filename = calloc(1, 32);
-    sscanf(request, "%s %s %s", method, filename, version);
+    sscanf(request, "%s %s %s\r\n", method, filename, version);
     return filename;
 }
 
-/* Returns 1 is file is a jpg/jpeg, 2 if png and 0 otherwise (based on extension) */
-int is_image(char *filename)
+/* Returns filetype based on file extension */
+enum filetype get_filetype(char *filename)
 {
     char name[strlen(filename)];
     char ext[8];
     sscanf(filename, "%s.%s", name, ext);
-    if(strcmp(ext, "jpg") == 0 || strcmp(ext, "jpeg") == 0)
-        return 1;
-    else if (strcmp(ext, "png") == 0)
-        return 2;
-    return 0;
+    printf("exts is %s\n", ext);
+    if(strcmp(ext, "html") == 0)
+        return HTML;
+    else if(strcmp(ext, "css") == 0)
+        return CSS;
+    else if(strcmp(ext, "jpg") == 0 || strcmp(ext, "jpeg") == 0)
+        return JPG;
+    else if(strcmp(ext, "png") == 0)
+        return PNG;
+    else if (strcmp(ext, "txt") == 0)
+        return TXT;
+    else
+        return UNKNOWN;
+}
+
+/* Creates the HTTP response HEADER based on file extension */
+char *get_response_header(char *filename)
+{
+    enum filetype ft = get_filetype(filename);
+    char *response_header = calloc(1, HTTP_BASE_OK_len + 32);
+    switch(ft) {
+        case HTML:
+            sprintf(response_header, "%stext/html; charset=iso-8859-1\r\n\r\n", HTTP_BASE_OK);
+            break;
+        case CSS:
+            sprintf(response_header, "%stext/css; charset=iso-8859-1\r\n\r\n", HTTP_BASE_OK);
+            break;
+        case TXT:
+            sprintf(response_header, "%stext/plain; charset=iso-8859-1\r\n\r\n", HTTP_BASE_OK);
+            break;
+        case JPG:
+            sprintf(response_header, "%simage/jpg\r\n\r\n", HTTP_BASE_OK);
+            break;
+        case PNG:
+            sprintf(response_header, "%smage/png\r\n\r\n", HTTP_BASE_OK);
+            break;
+        case UNKNOWN:
+            sprintf(response_header, "%sapplication/octet-stream\r\n\r\n", HTTP_BASE_OK);
+            break;
+    }
+    return response_header;
 }
 
 /* Thread function that handles a single client in a blocking fashion. This function takes no arguments.
@@ -253,9 +298,9 @@ int is_image(char *filename)
 void* handle_connection(void *args)
 {
     sleep(1);
-    int clientfd, htmlfd, imgtype;
+    int clientfd, htmlfd;
     char buffer[REQUEST_BUFFER_SIZE];
-    char *fullpath, *filename;
+    char *fullpath, *filename, *response_header;
     char *filebuffer = calloc(1, FILE_BUFFER_SIZE);
     qnode *node;
     int br,bw;
@@ -289,14 +334,11 @@ void* handle_connection(void *args)
         printf("fullpath: %s\n", fullpath);
         htmlfd = open(fullpath, O_RDONLY);
         if(htmlfd < 0) {
-            bw = write(clientfd, HTTP_404, sizeof(HTTP_404));
+            bw = write(clientfd, HTTP_404, HTTP_404_len);
             goto close_clientfd;
         } else {
-            imgtype = is_image(filename);
-            if(imgtype)
-                bw = write(clientfd, HTTP_IMG_OK, strlen(HTTP_IMG_OK));
-            else
-                bw = write(clientfd, HTTP_TEXT_OK, strlen(HTTP_TEXT_OK));
+            response_header = get_response_header(filename);
+            bw = write(clientfd, response_header, HTTP_BASE_OK_len + 32);
             if(bw <= 0)
                 goto close_clientfd;
             while((br = read(htmlfd, filebuffer, FILE_BUFFER_SIZE-1))) {
