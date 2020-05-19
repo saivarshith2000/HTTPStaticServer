@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# build files
+server
+
 # Object files
 *.o
 *.ko

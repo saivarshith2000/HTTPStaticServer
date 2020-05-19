@@ -1,2 +1,2 @@
-# HTTPStaticServer
-Static HTTP server written in single C file
+## Simple Static HTTP Server written in C
+
