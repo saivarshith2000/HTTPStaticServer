@@ -91,7 +91,6 @@ typedef struct queue queue;
 threadpool *pool;
 queue *connqueue;
 char *html_dir;
-int is_running;
 
 /* Creates a queue of given capacity */
 queue *create_queue(int capacity)
@@ -331,12 +330,12 @@ void* handle_connection(void *args)
         pthread_cond_wait(&(pool->cond_var), &(pool->lock));
         node = dequeue(connqueue);
         pthread_mutex_unlock(&(pool->lock));
+        /* Node will never be NULL, but for the safety */
         if(node == NULL)
             continue;
-
         clientfd = node->clientfd;
         free(node);
-
+        /* read request */
         br = read(clientfd, buffer, REQUEST_BUFFER_SIZE-1);
         bytes_read += br;
         /* check if read() failed */
@@ -347,13 +346,13 @@ void* handle_connection(void *args)
         if(strstr(buffer, "\r\n\r\n") == NULL)
             goto close_clientfd;
         filename = get_file_name(buffer);
-
         /* Method is not GET */
         if(filename == NULL) {
             bw = write(clientfd, HTTP_405, HTTP_405_len);
             bytes_wrote += bw;
             goto close_clientfd;
         }
+        /* If path is '/' server index.html, works only for root of html directory */
         if(strcmp(filename, "/") == 0) {
             sprintf(filename, "/index.html");
         }
@@ -387,7 +386,6 @@ close_clientfd:
         free(filename);
         close(clientfd);
     }
-    printf("HERE LOL\n");
     free(filebuffer);
     return NULL;
 }
@@ -461,14 +459,12 @@ int main(int argc, char *argv[])
     int clientfd = -1;
     struct sockaddr_in client_addr;
     socklen_t len;
-    is_running = 1;
-    while(is_running) {
+    while(1) {
         /* setup for select() */
         FD_ZERO(&readset);
         FD_SET(listenfd, &readset);
         FD_SET(STDIN_FILENO, &readset);
         if (select(listenfd + 1, &readset, NULL, NULL, NULL) < 0) {
-            is_running = 0;
             perror("select() error\n");
             break;
         }
@@ -476,7 +472,6 @@ int main(int argc, char *argv[])
         /* handle console input */
         if(FD_ISSET(STDIN_FILENO, &readset)) {
             if(handle_stdin()) {
-                is_running = 0;
                 break;
             }
         }
