@@ -244,6 +244,7 @@ int handle_stdin()
     input[7] = '\0';
     if(!strcmp(input, "exit\n") || !strcmp(input, "quit\n"))
         return 1;
+    printf("Enter 'exit' or 'quit' (without quotes) to stop the server\n");
     return 0;
 }
 
@@ -386,6 +387,7 @@ close_clientfd:
         free(filename);
         close(clientfd);
     }
+    printf("HERE LOL\n");
     free(filebuffer);
     return NULL;
 }
@@ -496,11 +498,16 @@ int main(int argc, char *argv[])
         }
     }
 
-    /* Prints stats */
-    printf("Total bytes received: %u Bytes\nTotal bytes sent: %u Bytes\n", bytes_read, bytes_wrote);
-
     /* Clean up */
     freequeue(connqueue);
     printf("stopping server\n");
+    int i;
+    for(i = 0; i < threads; i++) {
+        pthread_cancel(pool->workers[i]);
+    }
+
+    /* Prints stats */
+    printf("Total bytes received: %u Bytes\nTotal bytes sent: %u Bytes\n", bytes_read, bytes_wrote);
+
     return EXIT_SUCCESS;
 }
