@@ -43,8 +43,14 @@ const int default_poolsize = 8;
                  "Content-Type: text/html; charset=utf-8\r\n"\
                  "Connection: Closed\r\n\r\n"
 
+#define HTTP_405 "HTTP/1.1 405 Method Not Allowed\r\n"\
+                 "Server: Single File Server\r\n"\
+                 "Content-Type: text/html; charset=utf-8\r\n"\
+                 "Connection: Closed\r\n\r\n"
+
 const int HTTP_BASE_OK_len = strlen(HTTP_BASE_OK);
 const int HTTP_404_len = strlen(HTTP_404);
+const int HTTP_405_len = strlen(HTTP_405);
 
 
 /* Supported filetypes */
@@ -245,6 +251,9 @@ char *get_file_name(char *request)
     char method[8] = {'\0'}, version[8] = {'\0'};
     char *filename = calloc(1, 32);
     sscanf(request, "%s %s %s\r\n", method, filename, version);
+    /* If method is GET, return NULL */
+    if (strcmp(method, "GET") != 0)
+        return NULL;
     return filename;
 }
 
@@ -334,6 +343,12 @@ void* handle_connection(void *args)
         if(strstr(buffer, "\r\n\r\n") == NULL)
             goto close_clientfd;
         filename = get_file_name(buffer);
+
+        /* Method is not GET */
+        if(filename == NULL) {
+            bw = write(clientfd, HTTP_405, HTTP_405_len);
+            goto close_clientfd;
+        }
         if(strcmp(filename, "/") == 0) {
             sprintf(filename, "/index.html");
         }
