@@ -21,6 +21,17 @@ const int default_port = 8000;
 const int default_poolsize = 8;
 #define default_static "html";
 
+/* Help string */
+#define HELPSTRING "Static HTTP server\n"\
+                   "Usage: %s [-p port number] [-h html directory] [-t thread pool size]\n"\
+                   "\n[Optional arguments]\n"\
+                   "\t-p\tServer port (Default 8000)\n"\
+                   "\t-t\tThread pool size. Number of threads for the server to use. (Default 8)\n"\
+                   "\t-s\tHTML files in this directory are served. This directory must be in the same directory\n"\
+                   "\t\tas the server binary and don't add './' to the directory name! (Default 'html')\n"\
+                   "\t-h\tShows available arguments\n"
+
+
 /* HTTP Response Headers */
 #define HTTP_BASE_OK "HTTP/1.1 200 OK\r\n"\
                 "Server: Single File Server\r\n"\
@@ -31,13 +42,6 @@ const int default_poolsize = 8;
                  "Server: Single File Server\r\n"\
                  "Content-Type: text/html; charset=utf-8\r\n"\
                  "Connection: Closed\r\n\r\n"
-
-#define HELPSTRING "Usage: %s [-p port number] [-h html directory] [-t thread pool size]\n"\
-                   "\t-p\t\tServer port (Default 8000) [OPTIONAL]\n"\
-                   "\t-s\t\tHTML files in this directory are served.This directory must be in the same directory as the server executable\n"\
-                   "\t\t\tand don't add './' to the directory name! (Default 'html') [OPTIONAL]\n"\
-                   "\t-t\t\tThread pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]\n"\
-                   "\t-h\t\tShows available arguments\n"
 
 const int HTTP_BASE_OK_len = strlen(HTTP_BASE_OK);
 const int HTTP_404_len = strlen(HTTP_404);
@@ -156,7 +160,7 @@ int parse_args(int argc, char *argv[], int *port, int *threads, char **html_dir)
                 *html_dir = optarg;
                 break;
             case 'h':
-                printf("%s", HELPSTRING);
+                printf(HELPSTRING, argv[0]);
                 return 0;
             default:
                 printf("Invalid usage. Try -h for help\n");

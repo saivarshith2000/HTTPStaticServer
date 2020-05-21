@@ -11,7 +11,7 @@
 <body>
     <div id="container">
         <p id="top-bar">
-                Static HTTP server (bare-bones)
+            Static HTTP server (bare-bones)
             </a>
         </p>
 
@@ -21,8 +21,10 @@
 
         <div id="section">
             <p id="section-header">Why ?</p>
-            <p>Computer Networks is one of the courses this semester. But, due to the COVID-19 pandemic, it was cut short
-                and some of the stuff we were supposed to learn was not covered. So, I thought "may be I'll learn it online
+            <p>Computer Networks is one of the courses this semester. But, due to the COVID-19 pandemic, it was cut
+                short
+                and some of the stuff we were supposed to learn was not covered. So, I thought "may be I'll learn it
+                online
                 and see what I can do". This server is result of that thought.
             </p>
         </div>
@@ -67,9 +69,26 @@
 
         <div id="section">
             <p id="section-header">Benchmarks</p>
-            <p>I included a html page full of images of puppies and a script to make a 1000 requests to the server and time it. On
-                my PC with i5 processor, it takes around xxx seconds to run. To run the benchmark yourself, in the <code>root</code> directory run
+            <p>I included a html page full of images of puppies and a script to make a 100 requests to the server and
+                time it. On
+                my PC with i5 processor, it takes around 4 seconds to complete. To run the benchmark yourself, in the
+                <code>root</code> directory run
                 <code>bash benchmark.sh</code>.
+            </p>
+        </div>
+
+        <div id="section">
+            <p id="section-header">Usage</p>
+            <p id="usage">
+                Static HTTP server<br>
+                Usage: ./server [-p port number] [-h html directory] [-t thread pool size]<br>
+
+                <br>[Optional arguments]<br>
+                &emsp;-p&emsp;Server port (Default 8000)<br>
+                &emsp;-t&emsp;Thread pool size. Number of threads for the server to use. (Default 8)<br>
+                &emsp;-s&emsp;HTML files in this directory are served. This directory must be in the same directory as<br>
+                &emsp;&emsp;&emsp13;&emsp;the server binary and don't add './' to the directory name! (Default 'html')<br>
+                &emsp;-h&emsp;Shows available arguments<br>
             </p>
         </div>
     </div>

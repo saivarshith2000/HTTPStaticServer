@@ -8,5 +8,5 @@ run: server
 	./server
 
 clean:
-	rm -rf server debug
+	rm -rf server
 
