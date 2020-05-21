@@ -3,6 +3,7 @@
 
 # build files
 server
+temp/
 
 # Object files
 *.o

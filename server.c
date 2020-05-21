@@ -34,7 +34,7 @@ const int default_poolsize = 8;
 
 #define HELPSTRING "Usage: %s [-p port number] [-h html directory] [-t thread pool size]\n"\
                    "\t-p\t\tServer port (Default 8000) [OPTIONAL]\n"\
-                   "\t-h\t\tHTML files in this directory are served.This directory must be in the same directory as the server executable\n"\
+                   "\t-s\t\tHTML files in this directory are served.This directory must be in the same directory as the server executable\n"\
                    "\t\t\tand don't add './' to the directory name! (Default 'html') [OPTIONAL]\n"\
                    "\t-t\t\tThread pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]\n"\
                    "\t-h\t\tShows available arguments\n"
@@ -50,6 +50,7 @@ enum filetype {
     JPG,
     PNG,
     TXT,
+    SVG,
     UNKNOWN
 };
 
@@ -257,6 +258,8 @@ enum filetype get_filetype(char *filename)
         return JPG;
     else if(strcmp(ext, "png") == 0)
         return PNG;
+    else if(strcmp(ext, "svg") == 0)
+        return SVG;
     else if (strcmp(ext, "txt") == 0)
         return TXT;
     else
@@ -280,6 +283,12 @@ char *get_response_header(char *filename)
             break;
         case JPG:
             sprintf(response_header, "%simage/jpeg\r\n\r\n", HTTP_BASE_OK);
+            break;
+        case PNG:
+            sprintf(response_header, "%simage/png\r\n\r\n", HTTP_BASE_OK);
+            break;
+        case SVG:
+            sprintf(response_header, "%simage/svg+xml\r\n\r\n", HTTP_BASE_OK);
             break;
         default:
             sprintf(response_header, "%sapplication/octet-stream\r\n\r\n", HTTP_BASE_OK);
