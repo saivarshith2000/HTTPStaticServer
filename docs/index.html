@@ -1,41 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
     <title>Static HTTP Server</title>
 </head>
+
 <body>
-    <div style="width: 60%; margin: auto">
-        <p style="text-align: center; font-family: Arial, Helvetica, sans-serif; font-size: 36px">
-            Static HTTP Server written in single C file
+    <div id="container">
+        <p id="top-bar">
+                Static HTTP server (bare-bones)
+            </a>
         </p>
-        <div style="padding: 10px">
-            <p style="font-size: 24px; font-weight: bold">What can it do ?</p>
-            <p style="font-size: 20px">Runs on POSIX compliant systems</p>
-            <p style="font-size: 20px">HTTP GET</p>
-            <p style="font-size: 20px">Multithreading with thread pool</p>
-            <p style="font-size: 20px">Single File !</p>
+
+        <a target="_blank" href="https://www.github.com/saivarshith2000/HTTPStaticServer">
+            Github repository
+        </a>
+
+        <div id="section">
+            <p id="section-header">Why ?</p>
+            <p>Computer Networks is one of the courses this semester. But, due to the COVID-19 pandemic, it was cut short
+                and some of the stuff we were supposed to learn was not covered. So, I thought "may be I'll learn it online
+                and see what I can do". This server is result of that thought.
+            </p>
         </div>
-        <div style="padding: 10px">
-            <p style="font-size: 20px; font-weight: bold">How to run it ?</p>
-            <p style="font-size: 18px">1. You'll need a C compiler and make</p>
-            <p style="font-size: 18px">2. <code>clone</code> this repository and <code>cd</code> into it.</p>
-            <p style="font-size: 18px">3. In the root of this repository, run <code>make</code></p>
-            <p style="font-size: 18px">4. Place your html content in the public directory and run the
-                <code>server</code> executable</p>
+
+        <div id="section">
+            <p id="section-header">Features</p>
+            <ol>
+                <li>Static HTTP GET</li>
+                <li>Multithreading</li>
+                <li>Nothing else</li>
+            </ol>
         </div>
-        <div style="padding: 10px">
-            <p style="font-size: 20px; font-weight: bold">Command Line Arguments</p>
-            <p style="font-size: 18px; background-color: silver; padding: 10px">
-                <code>Usage: %s [-p port number] [-h html directory] [-t thread pool size]<br>
-                    -p&emsp;&emsp;Server port (Default 8000) [OPTIONAL]<br> 
-                    -h&emsp;&emsp;HTML files in this directory are served.This directory must be in the same directory as the server executable
-                     and don't add './' to the directory name! (Default 'html') [OPTIONAL]<br> 
-                    -t&emsp;&emsp;pool size. Number of threads for the server to use. (Default 8) [OPTIONAL]<br> 
-                    -h&emsp;&emsp;Shows available arguments<br> 
-                </code></p>
+
+        <div id="section">
+            <p id="section-header">Running</p>
+            <ol>
+                <li>You'll need a POSIX compliant system, <code>gcc</code> and <code>make</code>(optional).</li>
+                <li><code>clone</code> this repository and run <code>make</code>.</li>
+                <li>If you don't have <code>make</code> run <code>gcc -Wall server.c -o server</code> in root directory.
+                </li>
+                <li>Place your static content in the <code>html/</code> directory or pass your directory name as an
+                    argument. In anycase, the static directory must be
+                    in the same directory as the <code>server</code> binary.</li>
+                <li>Execute the server binary. When you want to stop, type <code>exit</code></li>
+            </ol>
         </div>
+
+        <div id="section">
+            <p id="section-header">How does it work ?</p>
+            <ol>
+                <li>The <code>main()</code> sets up a listening socket, a threadpool with 8 worker threads (default) and
+                    waits for incoming connections.</li>
+                <li>When a new connection arrives, it puts the client socket file descriptor in a queue and sends a
+                    signal to the threadpool
+                    using the <code>pthread_cond_wait()</code> method and forgets about it.</li>
+                <li>A free thread from the threadpool dequeues this connection. If no thread is free, then it will sit
+                    in the queue until some thread comes for it.</li>
+                <li>The worker thread receives the HTTP request from client and returns the appropriate HTTP response
+                    and closes the connection.</li>
+            </ol>
+        </div>
+
+        <div id="section">
+            <p id="section-header">Benchmarks</p>
+            <p>I included a html page full of images of puppies and a script to make a 1000 requests to the server and time it. On
+                my PC with i5 processor, it takes around xxx seconds to run. To run the benchmark yourself, in the <code>root</code> directory run
+                <code>bash benchmark.sh</code>.
+            </p>
+        </div>
+    </div>
 </body>
+
 </html>
-</div>

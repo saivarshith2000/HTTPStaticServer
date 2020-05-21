@@ -1,0 +1,53 @@
+/* Stylesheet for index.html */
+* {
+    margin: 0px;
+    padding: 0px;
+    font-family: Roboto, sans-serif;
+    line-height: 1.6;
+}
+
+#container {
+    width: 60%;
+    margin: auto;
+    padding: 20px;
+}
+
+
+#top-bar {
+    font-size: 36px;
+    text-align: center;
+}
+
+a:link, a:visited, a:active{
+    color: black;
+    padding: 20px;
+    font-size: 18px;
+    text-decoration: none;
+    text-decoration: underline;
+    transition: 0.2s;
+    margin-bottom: 5px;
+}
+
+a:hover {
+    color: white;
+    background: black;
+}
+
+#section {
+    font-size: 18px;
+    margin: 20px;
+    margin-bottom: 0px;
+}
+
+#section-header {
+    font-size: 24px;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+code {
+    background: #f0f0f0;
+    padding: 3px 7px;
+    border-radius: 3px;
+    font-family: Roboto-Mono, monospace;
+}
