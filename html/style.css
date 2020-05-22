@@ -45,6 +45,7 @@ a:hover {
 }
 
 #usage {
+    font-size: 18px;
     background: #f0f0f0;
     padding: 15px;
     border-radius: 10px;
@@ -56,4 +57,32 @@ code {
     padding: 3px 7px;
     border-radius: 3px;
     font-family: Roboto-Mono, monospace;
+}
+
+/* For mobile phones */
+@media only screen and (max-width: 600px) {
+    #container {
+        width: 90%;
+    }
+
+    #top-bar {
+        font-size: 24px;
+    }
+
+    a {
+        font-size: 12px;
+    }
+
+    #section {
+        font-size: 12px;
+    }
+
+    #section-header {
+        font-size: 14px;
+    }
+
+    #usage {
+        font-size: 12px;
+    }
+
 }
