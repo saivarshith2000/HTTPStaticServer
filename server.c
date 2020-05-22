@@ -373,7 +373,7 @@ enum http_status handle_http_request(char *request, int *htmlfd, char **response
         /* get_file_name() returns 0 if method is not GET */
         return NOTGET;
     }
-    if (filename[0] == '.' || filename[0] == '~') {
+    if (filename[0] == '.' || filename[0] == '~' || strstr(filename, "..") != NULL) {
         /* If the filename starts with any of the above chars, its a malicious request */
         return BADFILE;
     }
