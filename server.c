@@ -52,8 +52,8 @@ const int HTTP_BASE_OK_len = strlen(HTTP_BASE_OK);
 const int HTTP_404_len = strlen(HTTP_404);
 const int HTTP_405_len = strlen(HTTP_405);
 
-unsigned int bytes_read = 0;
-unsigned int bytes_wrote = 0;
+volatile unsigned int bytes_read = 0;
+volatile unsigned int bytes_wrote = 0;
 
 /* Supported filetypes */
 enum filetype {
@@ -337,10 +337,10 @@ void* handle_connection(void *args)
         free(node);
         /* read request */
         br = read(clientfd, buffer, REQUEST_BUFFER_SIZE-1);
-        bytes_read += br;
         /* check if read() failed */
         if(br <= 0)
             goto close_clientfd;
+        bytes_read += br;
         buffer[br] = '\0';
         /* Check for end of HTTP request header */
         if(strstr(buffer, "\r\n\r\n") == NULL)
@@ -349,7 +349,8 @@ void* handle_connection(void *args)
         /* Method is not GET */
         if(filename == NULL) {
             bw = write(clientfd, HTTP_405, HTTP_405_len);
-            bytes_wrote += bw;
+            if(bw > 0)
+                bytes_wrote += bw;
             goto close_clientfd;
         }
         /* If path is '/' server index.html, works only for root of html directory */
@@ -362,21 +363,22 @@ void* handle_connection(void *args)
         htmlfd = open(fullpath, O_RDONLY);
         if(htmlfd < 0) {
             bw = write(clientfd, HTTP_404, HTTP_404_len);
-            bytes_wrote += bw;
+            if(bw > 0)
+                bytes_wrote += bw;
             goto close_clientfd;
         } else {
             response_header = get_response_header(filename);
             bw = write(clientfd, response_header, strlen(response_header));
-            bytes_wrote += bw;
             if(bw <= 0)
                 goto close_clientfd;
+            bytes_wrote += bw;
             while((br = read(htmlfd, filebuffer, FILE_BUFFER_SIZE-1))) {
                 bytes_read += br;
                 filebuffer[br] = '\0';
                 bw = write(clientfd, filebuffer, br);
-                bytes_wrote += bw;
                 if(bw <= 0)
                     goto close_clientfd;
+                bytes_wrote += bw;
                 memset(filebuffer, 0, bw);
             }
             close(htmlfd);
