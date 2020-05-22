@@ -36,7 +36,7 @@ const int DEFAULT_POOLSIZE = 8;
 #define HTTP_BASE_OK "HTTP/1.1 200 OK\r\n"\
                 "Server: Single File Server\r\n"\
                 "Connection: Closed\r\n"\
-                "Content-Type: "\
+                "Content-Type: "
 
 #define HTTP_404 "HTTP/1.1 404 Not Found\r\n"\
                  "Server: Single File Server\r\n"\
@@ -48,9 +48,10 @@ const int DEFAULT_POOLSIZE = 8;
                  "Content-Type: text/html; charset=utf-8\r\n"\
                  "Connection: Closed\r\n\r\n"
 
-const int HTTP_BASE_OK_len = strlen(HTTP_BASE_OK);
-const int HTTP_404_len = strlen(HTTP_404);
-const int HTTP_405_len = strlen(HTTP_405);
+#define HTTP_BASE_OK_len strlen(HTTP_BASE_OK)
+#define HTTP_404_len strlen(HTTP_404)
+#define HTTP_405_len strlen(HTTP_405)
+
 
 volatile unsigned int bytes_read = 0;
 volatile unsigned int bytes_wrote = 0;
@@ -153,6 +154,10 @@ void freequeue(queue *q)
         free(temp);
     }
     free(q);
+
+    /* Destroy lock and cond_var */
+    pthread_mutex_destroy(&(q->lock));
+    pthread_cond_destroy(&(q->cond_var));
     return ;
 }
 
