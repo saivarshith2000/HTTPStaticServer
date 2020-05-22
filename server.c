@@ -17,9 +17,9 @@ const int MAX_CONNECTIONS = 64;
 const int REQUEST_BUFFER_SIZE = 1024;
 const int FILE_BUFFER_SIZE = 1024;
 
-const int default_port = 8000;
-const int default_poolsize = 8;
-#define default_static "html";
+const int DEFAULT_PORT = 8000;
+const int DEFAULT_POOLSIZE = 8;
+#define DEFAULT_STATIC "html";
 
 /* Help string */
 #define HELPSTRING "Static HTTP server\n"\
@@ -66,13 +66,6 @@ enum filetype {
     UNKNOWN
 };
 
-struct threadpool {
-    pthread_t *workers;
-    pthread_mutex_t lock;
-    pthread_cond_t cond_var;
-};
-typedef struct threadpool threadpool;
-
 struct qnode {
     int clientfd;
     struct qnode *next;
@@ -84,11 +77,12 @@ struct queue {
     int capacity;
     qnode *head;
     qnode *tail;
+    pthread_mutex_t lock;
+    pthread_cond_t cond_var;
 };
 typedef struct queue queue;
 
 /* Global variables for threads */
-threadpool *pool;
 queue *connqueue;
 char *html_dir;
 
@@ -100,6 +94,19 @@ queue *create_queue(int capacity)
     q->size = 0;
     q->head = NULL;
     q->tail = NULL;
+
+    // Synchronization variables
+    if (pthread_mutex_init(&(q->lock), NULL) != 0) {
+        perror("Error Initialising mutex lock\n");
+        free(q);
+        return NULL;
+    }
+    if (pthread_cond_init(&(q->cond_var), NULL) != 0){
+        pthread_mutex_destroy(&(q->lock));
+        perror("Error Initialising conditional variable\n");
+        free(q);
+        return NULL;
+    }
     return q;
 }
 
@@ -326,10 +333,10 @@ void* handle_connection(void *args)
     int br,bw;
     while(1) {
         /* Dequeue a connection */
-        pthread_mutex_lock(&(pool->lock));
-        pthread_cond_wait(&(pool->cond_var), &(pool->lock));
+        pthread_mutex_lock(&(connqueue->lock));
+        pthread_cond_wait(&(connqueue->cond_var), &(connqueue->lock));
         node = dequeue(connqueue);
-        pthread_mutex_unlock(&(pool->lock));
+        pthread_mutex_unlock(&(connqueue->lock));
         /* Node will never be NULL, but for the safety */
         if(node == NULL)
             continue;
@@ -392,43 +399,28 @@ close_clientfd:
     return NULL;
 }
 
-/* Creates a threadpool with 'poolsize' number of threads each running
- * the thread_func() function
+/* Creates 'poolsize' number of threads and returns a pointer to pthread_t array. If
+ * any error occurs, message is printed and NULL is returned
  */
-threadpool* create_threadpool(int poolsize, void *thread_func)
+pthread_t* create_threadpool(int poolsize, void *thread_func)
 {
-    threadpool* pool = malloc(sizeof(threadpool));
-    if (pthread_mutex_init(&(pool->lock), NULL) != 0) {
-        perror("Error Initialising mutex lock\n");
-        free(pool);
-        return NULL;
-    }
-    if (pthread_cond_init(&(pool->cond_var), NULL) != 0){
-        pthread_mutex_destroy(&(pool->lock));
-        perror("Error Initialising conditional variable\n");
-        free(pool);
-        return NULL;
-    }
-    pool->workers = calloc(poolsize, sizeof(pthread_t));
+    pthread_t *workers = calloc(poolsize, sizeof(pthread_t));
     int i;
     for(i = 0; i < poolsize; i++) {
-        if(pthread_create(&(pool->workers[i]), NULL, thread_func, NULL) < 0){
+        if(pthread_create(&workers[i], NULL, thread_func, NULL) < 0){
             perror("Error in pthread_create()\n");
-            pthread_mutex_destroy(&(pool->lock));
-            pthread_cond_destroy(&(pool->cond_var));
-            free(pool->workers);
-            free(pool);
+            free(workers);
             return NULL;
         }
     }
-    return pool;
+    return workers;
 }
 
 int main(int argc, char *argv[])
 {
-    int port = default_port;
-    int threads = default_poolsize;
-    html_dir = default_static;
+    int port = DEFAULT_PORT;
+    int threads = DEFAULT_POOLSIZE;
+    html_dir = DEFAULT_STATIC;
 
     /* Parse arguments */
     if(!parse_args(argc, argv, &port, &threads, &html_dir))
@@ -444,11 +436,19 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
 
     /* Create connection queue */
-    connqueue = create_queue(MAX_CONNECTIONS);
+    if((connqueue = create_queue(MAX_CONNECTIONS)) == NULL){
+        close(listenfd);
+        exit(EXIT_FAILURE);
+    }
 
     /* initiate thread pool */
-    if((pool = create_threadpool(threads, handle_connection)) == NULL)
+    pthread_t *workers;
+    if((workers = create_threadpool(threads, handle_connection)) == NULL) {
+        close(listenfd);
+        pthread_mutex_destroy(&(connqueue->lock));
+        pthread_cond_destroy(&(connqueue->cond_var));
         exit(EXIT_FAILURE);
+    }
 
     /* Print server configuration */
     printf("Server running on port: %d\nthreads: %d\nstatic directory: %s\nType exit or quit to exit\n", port, threads, html_dir);
@@ -483,14 +483,14 @@ int main(int argc, char *argv[])
             memset(&client_addr, 0, sizeof(client_addr));
             len = sizeof(client_addr);
             clientfd = accept(listenfd, (struct sockaddr*)&client_addr, &len);
-            pthread_mutex_lock(&(pool->lock));
+            pthread_mutex_lock(&(connqueue->lock));
             if(enqueue(connqueue, clientfd) < 0){
                 printf("Connection capacity reached. Dropped new connection!\n");
                 close(clientfd);
             } else {
-                pthread_cond_signal(&(pool->cond_var));
+                pthread_cond_signal(&(connqueue->cond_var));
             }
-            pthread_mutex_unlock(&(pool->lock));
+            pthread_mutex_unlock(&(connqueue->lock));
         }
     }
 
@@ -499,7 +499,7 @@ int main(int argc, char *argv[])
     printf("stopping server\n");
     int i;
     for(i = 0; i < threads; i++) {
-        pthread_cancel(pool->workers[i]);
+        pthread_cancel(workers[i]);
     }
 
     /* Prints stats */
