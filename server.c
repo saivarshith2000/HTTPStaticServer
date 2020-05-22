@@ -452,7 +452,7 @@ int main(int argc, char *argv[])
     printf("Server running on port: %d\nthreads: %d\nstatic directory: %s\nType exit or quit to exit\n", port, threads, html_dir);
 
     /* ignore broken pipe */
-    signal(SIGPIPE, NULL);
+    signal(SIGPIPE, SIG_IGN);
 
     /* Start server loop */
     fd_set readset;
