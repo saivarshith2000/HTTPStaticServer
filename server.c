@@ -324,7 +324,7 @@ void* handle_connection(void *args)
     char *filebuffer = calloc(1, FILE_BUFFER_SIZE);
     qnode *node;
     int br,bw;
-    while(is_running) {
+    while(1) {
         /* Dequeue a connection */
         pthread_mutex_lock(&(pool->lock));
         pthread_cond_wait(&(pool->cond_var), &(pool->lock));
@@ -485,11 +485,10 @@ int main(int argc, char *argv[])
             if(enqueue(connqueue, clientfd) < 0){
                 printf("Connection capacity reached. Dropped new connection!\n");
                 close(clientfd);
-                pthread_mutex_unlock(&(pool->lock));
             } else {
                 pthread_cond_signal(&(pool->cond_var));
-                pthread_mutex_unlock(&(pool->lock));
             }
+            pthread_mutex_unlock(&(pool->lock));
         }
     }
 

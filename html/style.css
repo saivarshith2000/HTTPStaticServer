@@ -7,7 +7,7 @@
 }
 
 #container {
-    width: 60%;
+    width: 50%;
     margin: 20px auto;
 }
 
@@ -28,8 +28,8 @@ a:link, a:visited, a:active{
 }
 
 a:hover {
-    color: white;
-    background: black;
+    color: #3e629c;
+    text-decoration: none
 }
 
 #section {
