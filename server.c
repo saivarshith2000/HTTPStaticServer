@@ -289,7 +289,7 @@ int get_file_name(char *request, char *filename)
 {
     // TODO: Fix buffer overflow here !!!
     char method[8] = {'\0'}, version[8] = {'\0'};
-    sscanf(request, "%s %s %s\x0a\x0a", method, filename, version);
+    sscanf(request, "%s %s %s\r\n", method, filename, version);
     /* If method is GET, return NULL */
     if (strcmp(method, "GET") != 0)
         return 0;
@@ -377,6 +377,12 @@ enum http_status handle_http_request(char *request, int *htmlfd, char **response
         /* If the filename starts with any of the above chars, its a malicious request */
         return BADFILE;
     }
+
+    /* If the filename is "/" set it to "index.html" */
+    if(strcmp(filename, "/") == 0)
+        sprintf(filename, "/index.html");
+
+
     sprintf(fullpath, "./%s%s", html_dir, filename);
     if ((fd = open(fullpath, O_RDONLY))) {
         *htmlfd = fd;
