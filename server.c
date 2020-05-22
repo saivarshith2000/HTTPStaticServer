@@ -67,6 +67,15 @@ enum filetype {
     UNKNOWN
 };
 
+/* HTTP request status */
+enum http_status {
+    OK,
+    INCOMPLETE,
+    NOTGET,
+    BADFILE,
+    NOTFOUND
+};
+
 struct qnode {
     int clientfd;
     struct qnode *next;
@@ -85,6 +94,7 @@ typedef struct queue queue;
 
 /* Global variables accessed by threads */
 char *html_dir;
+int html_dir_len = 0;
 queue *connqueue;
 volatile unsigned int bytes_read = 0;
 volatile unsigned int bytes_wrote = 0;
@@ -339,18 +349,61 @@ char *get_response_header(char *filename)
     return response_header;
 }
 
+/* This function handles a http request and returns the enum indicating request status.
+ * If the request is valid, it returns the file descriptor of the html file via htmlfd pointer
+ * It also returns the response header via the response_header pointer.
+ */
+enum http_status handle_http_request(char *request, int *htmlfd, char **response_header)
+{
+    char filename[FILE_NAME_SIZE] = {'\0'};
+    char fullpath[FILE_NAME_SIZE + html_dir_len + 4];
+    memset(fullpath, 0, FILE_NAME_SIZE + html_dir_len + 4);
+    int fd = -1;
+
+    /* Intial values for return pointers */
+    *htmlfd = -1;
+    *response_header = NULL;
+
+    /* Check that the entire request is read */
+    if (strstr(request, "\r\n\r\n") == NULL)
+        return INCOMPLETE;
+
+    /* Extract filename */
+    if(get_file_name(request, filename) == 0){
+        /* get_file_name() returns 0 if method is not GET */
+        return NOTGET;
+    }
+    if (filename[0] == '.' || filename[0] == '~') {
+        /* If the filename starts with any of the above chars, its a malicious request */
+        return BADFILE;
+    }
+    sprintf(fullpath, "./%s%s", html_dir, filename);
+    if ((fd = open(fullpath, O_RDONLY))) {
+        *htmlfd = fd;
+        *response_header = get_response_header(filename);
+        return OK;
+    } else {
+        return NOTFOUND;
+    }
+}
+
 /* Thread function that handles a single client in a blocking fashion. This function takes no arguments.
  * The connection queue pointer is global and mutex locks and condition variables are global.
  */
 void* handle_connection(void *args)
 {
-    int clientfd, htmlfd;
-    char *fullpath, *response_header;
-    int br,bw, is_file_valid = 0;
     while(1) {
-        /* Clear buffers */
+        /* File descriptors */
+        int clientfd = -1;        // holds the client socket descriptor
+        int htmlfd = -1;          // holds the html file descriptor
+
+        /* indicates the status of the http request */
+        enum http_status req_status;
+        int br,bw;                // stores bytes read and bytes wrote for read() and write()
+
+        /* Char buffers */
+        char *response_header;
         char filebuffer[FILE_BUFFER_SIZE] = {'\0'};
-        char filename[FILE_NAME_SIZE] = {'\0'};
         char req_buffer[REQUEST_BUFFER_SIZE] = {'\0'};
 
         /* Dequeue a connection */
@@ -358,59 +411,57 @@ void* handle_connection(void *args)
         pthread_cond_wait(&(connqueue->cond_var), &(connqueue->lock));
         clientfd = dequeue(connqueue);
         pthread_mutex_unlock(&(connqueue->lock));
-        /* Node will never be NULL, but for the safety */
+
+        /* Verify that dequeue was successful */
         if(clientfd == -1)
             continue;
-        /* read request */
+
+        /* read request and check if it failed */
         br = read(clientfd, req_buffer, REQUEST_BUFFER_SIZE-1);
-        /* check if read() failed */
         if(br <= 0)
             goto close_clientfd;
         req_buffer[br] = '\0';
         bytes_read += br;
-        /* Check for end of HTTP request header */
-        if(strstr(req_buffer, "\r\n\r\n") == NULL)
-            goto close_clientfd;
-        is_file_valid = get_file_name(req_buffer, filename);
-        /* Method is not GET */
-        if(is_file_valid == 0) {
-            bw = write(clientfd, HTTP_405, HTTP_405_len);
-            if(bw > 0)
-                bytes_wrote += bw;
-            goto close_clientfd;
-        }
-        /* If path is '/' server index.html, works only for root of html directory */
-        if(strcmp(filename, "/") == 0) {
-            sprintf(filename, "/index.html");
-        }
-        /* attempt to read html file */
-        fullpath = calloc(1, strlen(html_dir) + strlen(filename) + 4);
-        sprintf(fullpath, "./%s%s", html_dir, filename);
-        htmlfd = open(fullpath, O_RDONLY);
-        if(htmlfd < 0) {
-            bw = write(clientfd, HTTP_404, HTTP_404_len);
-            if(bw > 0)
-                bytes_wrote += bw;
-            goto close_clientfd;
-        } else {
-            response_header = get_response_header(filename);
-            bw = write(clientfd, response_header, strlen(response_header));
-            if(bw <= 0)
+
+        /* Handle http request */
+        req_status = handle_http_request(req_buffer, &htmlfd, &response_header);
+        switch(req_status){
+            case INCOMPLETE:
+            case BADFILE:
                 goto close_clientfd;
-            bytes_wrote += bw;
-            while((br = read(htmlfd, filebuffer, FILE_BUFFER_SIZE-1))) {
-                bytes_read += br;
-                filebuffer[br] = '\0';
-                bw = write(clientfd, filebuffer, br);
-                if(bw <= 0)
+            case NOTGET:
+                {
+                    bw = write(clientfd, HTTP_405, HTTP_405_len);
+                    if(bw > 0)
+                        bytes_wrote += bw;
                     goto close_clientfd;
-                bytes_wrote += bw;
-                memset(filebuffer, 0, bw);
-            }
-            close(htmlfd);
+                }
+            case NOTFOUND:
+                {
+                    bw = write(clientfd, HTTP_404, HTTP_404_len);
+                    if(bw > 0)
+                        bytes_wrote += bw;
+                    goto close_clientfd;
+                }
+            case OK:
+                {
+                    bw = write(clientfd, response_header, strlen(response_header));
+                    if(bw <= 0)
+                        goto close_clientfd;
+                    bytes_wrote += bw;
+                    while((br = read(htmlfd, filebuffer, FILE_BUFFER_SIZE-1))) {
+                        bytes_read += br;
+                        filebuffer[br] = '\0';
+                        bw = write(clientfd, filebuffer, br);
+                        if(bw <= 0)
+                            goto close_clientfd;
+                        bytes_wrote += bw;
+                        memset(filebuffer, 0, bw);
+                    }
+                    close(htmlfd);
+                }
         }
 close_clientfd:
-        free(fullpath);
         close(clientfd);
     }
     return NULL;
@@ -446,6 +497,7 @@ int main(int argc, char *argv[])
     /* check static directory */
     if(!check_html_dir())
         exit(EXIT_FAILURE);
+    html_dir_len = strlen(html_dir);
 
     /* open listen socket */
     int listenfd;

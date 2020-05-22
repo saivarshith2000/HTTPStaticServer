@@ -59,7 +59,7 @@ runtime=$((end-start))
 cd ../ && rm -rf temp
 
 # report results
-echo "Made $num_requests"
+echo "Made $num_requests requests"
 echo "Total time: $(expr $runtime / 1000000000) s"
 echo "Average time per request: $(expr $(expr $runtime / $num_requests) / 1000000) ms"
 
