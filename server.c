@@ -12,14 +12,17 @@
 #include <signal.h>
 #include <pthread.h>
 
-const int LISTEN_BACKLOG = 32;
-const int MAX_CONNECTIONS = 64;
-const int REQUEST_BUFFER_SIZE = 1024;
-const int FILE_BUFFER_SIZE = 1024;
+/* Buffer sizes */
+#define REQUEST_BUFFER_SIZE 2048
+#define FILE_BUFFER_SIZE 1024
+#define FILE_NAME_SIZE 64
 
-const int DEFAULT_PORT = 8000;
-const int DEFAULT_POOLSIZE = 8;
-#define DEFAULT_STATIC "html";
+/* Default server config */
+#define LISTEN_BACKLOG 32
+#define MAX_CONNECTIONS 64
+#define DEFAULT_PORT 8000
+#define DEFAULT_POOLSIZE 8
+#define DEFAULT_STATIC "html"
 
 /* Help string */
 #define HELPSTRING "Static HTTP server\n"\
@@ -53,9 +56,6 @@ const int DEFAULT_POOLSIZE = 8;
 #define HTTP_405_len strlen(HTTP_405)
 
 
-volatile unsigned int bytes_read = 0;
-volatile unsigned int bytes_wrote = 0;
-
 /* Supported filetypes */
 enum filetype {
     HTML,
@@ -83,14 +83,16 @@ struct queue {
 };
 typedef struct queue queue;
 
-/* Global variables for threads */
-queue *connqueue;
+/* Global variables accessed by threads */
 char *html_dir;
+queue *connqueue;
+volatile unsigned int bytes_read = 0;
+volatile unsigned int bytes_wrote = 0;
 
 /* Creates a queue of given capacity */
 queue *create_queue(int capacity)
 {
-    queue *q = calloc(1, sizeof(queue));
+    queue *q = malloc(sizeof(queue));
     q->capacity = capacity;
     q->size = 0;
     q->head = NULL;
@@ -117,31 +119,42 @@ int enqueue(queue *q, int clientfd)
     if(q->size == q->capacity) {
         return -1;
     }
-    qnode *node = calloc(1, sizeof(qnode));
+    qnode *node = malloc(sizeof(qnode));
     node->clientfd = clientfd;
     node->next = NULL;
     if(q->size == 0) {
         q->head = node;
         q->tail = node;
-        q->size = 1;
     } else {
+        q->tail->next = node;
         q->tail = node;
-        q->size++;
     }
+    q->size++;
     return 1;
 }
 
 /* Dequeues a connection from the queue and returns pointer to the dequeued
- * node. Its upto the caller to free the dequeued node
+ * node. Frees the qnode and returns its contents. If q is empty -1 is returned.
  */
-qnode *dequeue(queue *q)
+int dequeue(queue *q)
 {
     if(q->size == 0)
-        return NULL;
-    qnode *retnode = q->head;
-    q->head = q->head->next;
+        return -1;
+
+    int retval = q->head->clientfd;
+    if(q->size == 1) {
+        /* At this point, tail and head point to the same node, so don't free both. This was the cause of
+         * the occasional segfault */
+        free(q->head);
+        q->head = NULL;
+        q->tail = NULL;
+    } else {
+        qnode *oldhead = q->head;
+        q->head = oldhead->next;
+        free(oldhead);
+    }
     q->size--;
-    return retnode;
+    return retval;
 }
 
 /* Deallocates the memory given to queue */
@@ -259,16 +272,18 @@ int handle_stdin()
     return 0;
 }
 
-/* Returns the filename extracted from HTTP GET request */
-char *get_file_name(char *request)
+/* The file name extracted from HTTP GET request and returned via the filename pointer.
+ * 1 is returned on success and 0 otherwise
+ */
+int get_file_name(char *request, char *filename)
 {
+    // TODO: Fix buffer overflow here !!!
     char method[8] = {'\0'}, version[8] = {'\0'};
-    char *filename = calloc(1, 32);
-    sscanf(request, "%s %s %s\r\n", method, filename, version);
+    sscanf(request, "%s %s %s\x0a\x0a", method, filename, version);
     /* If method is GET, return NULL */
     if (strcmp(method, "GET") != 0)
-        return NULL;
-    return filename;
+        return 0;
+    return 1;
 }
 
 /* Returns filetype based on file extension */
@@ -329,37 +344,36 @@ char *get_response_header(char *filename)
  */
 void* handle_connection(void *args)
 {
-    sleep(1);
     int clientfd, htmlfd;
-    char buffer[REQUEST_BUFFER_SIZE];
-    char *fullpath, *filename, *response_header;
-    char *filebuffer = calloc(1, FILE_BUFFER_SIZE);
-    qnode *node;
-    int br,bw;
+    char *fullpath, *response_header;
+    int br,bw, is_file_valid = 0;
     while(1) {
+        /* Clear buffers */
+        char filebuffer[FILE_BUFFER_SIZE] = {'\0'};
+        char filename[FILE_NAME_SIZE] = {'\0'};
+        char req_buffer[REQUEST_BUFFER_SIZE] = {'\0'};
+
         /* Dequeue a connection */
         pthread_mutex_lock(&(connqueue->lock));
         pthread_cond_wait(&(connqueue->cond_var), &(connqueue->lock));
-        node = dequeue(connqueue);
+        clientfd = dequeue(connqueue);
         pthread_mutex_unlock(&(connqueue->lock));
         /* Node will never be NULL, but for the safety */
-        if(node == NULL)
+        if(clientfd == -1)
             continue;
-        clientfd = node->clientfd;
-        free(node);
         /* read request */
-        br = read(clientfd, buffer, REQUEST_BUFFER_SIZE-1);
+        br = read(clientfd, req_buffer, REQUEST_BUFFER_SIZE-1);
         /* check if read() failed */
         if(br <= 0)
             goto close_clientfd;
+        req_buffer[br] = '\0';
         bytes_read += br;
-        buffer[br] = '\0';
         /* Check for end of HTTP request header */
-        if(strstr(buffer, "\r\n\r\n") == NULL)
+        if(strstr(req_buffer, "\r\n\r\n") == NULL)
             goto close_clientfd;
-        filename = get_file_name(buffer);
+        is_file_valid = get_file_name(req_buffer, filename);
         /* Method is not GET */
-        if(filename == NULL) {
+        if(is_file_valid == 0) {
             bw = write(clientfd, HTTP_405, HTTP_405_len);
             if(bw > 0)
                 bytes_wrote += bw;
@@ -397,10 +411,8 @@ void* handle_connection(void *args)
         }
 close_clientfd:
         free(fullpath);
-        free(filename);
         close(clientfd);
     }
-    free(filebuffer);
     return NULL;
 }
 
