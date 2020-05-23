@@ -45,10 +45,11 @@ a:hover {
     font-weight: bold;
 }
 
-#usage {
+.snippet {
     font-size: 18px;
     background: #f0f0f0;
     padding: 15px;
+	margin: 5px;
     border-radius: 10px;
     font-family: Roboto-Mono, monospace;
 }
@@ -82,7 +83,7 @@ code {
         font-size: 14px;
     }
 
-    #usage {
+    .snippet {
         font-size: 12px;
     }
 
