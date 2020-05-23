@@ -73,20 +73,22 @@
         <div id="section">
             <p id="section-header">Benchmarks</p>
             <p>I included a html page full of images of puppies and a script to make a 100 requests to the server and
-                time it. On my laptop with an i7 processor and 8 GB RAM, each request takes around a second to complete. To run the benchmark yourself, in the
+                time it. On my laptop with an i5 processor and 8 GB RAM, each request takes around a second to complete. To run the benchmark yourself, in the
                 root directory of this repository run <code>bash benchmark.sh</code>.
             </p>
 			<p class="snippet">
+            $ bash benchmark.sh<br>
 			Benchmark url: http://localhost:8000//benchmark/puppies/index.html<br>
 			Made 100 requests<br>
-			Total time: 103 s<br>
-			Average time per request: 1038 ms<br>
+			Total time: 41 s<br>
+			Average time per request: 412 ms<br>
 			</p>
         </div>
 
         <div id="section">
             <p id="section-header">Usage</p>
             <p class="snippet">
+            $ ./server -h<br><br>
                 Static HTTP server<br>
                 Usage: ./server [-p port number] [-h html directory] [-t thread pool size]<br>
 

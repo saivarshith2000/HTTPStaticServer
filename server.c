@@ -25,7 +25,7 @@
 #define DEFAULT_STATIC "html"
 
 /* Help string */
-#define HELPSTRING "Static HTTP server\n"\
+#define HELPSTRING "\nStatic HTTP server\n"\
 	"Usage: %s [-p port number] [-h html directory] [-t thread pool size]\n"\
 	"\n[Optional arguments]\n"\
 	"\t-p\tServer port (Default 8000)\n"\
