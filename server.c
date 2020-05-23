@@ -44,12 +44,12 @@
 #define HTTP_404 "HTTP/1.1 404 Not Found\r\n"\
 	"Server: Single File Server\r\n"\
 	"Content-Type: text/html; charset=utf-8\r\n"\
-	"Connection: Closed\r\n\r\n"
+	"Connection: Closed\r\n\r\nPAGE NOT FOUND"
 
 #define HTTP_405 "HTTP/1.1 405 Method Not Allowed\r\n"\
 	"Server: Single File Server\r\n"\
 	"Content-Type: text/html; charset=utf-8\r\n"\
-	"Connection: Closed\r\n\r\n"
+	"Connection: Closed\r\n\r\nONLY GET IS ACCEPTED"
 
 #define HTTP_BASE_OK_len strlen(HTTP_BASE_OK)
 #define HTTP_404_len strlen(HTTP_404)
@@ -287,9 +287,8 @@ int handle_stdin()
  */
 int get_file_name(char *request, char *filename)
 {
-	// TODO: Fix buffer overflow here !!!
 	char method[8] = {'\0'}, version[8] = {'\0'};
-	sscanf(request, "%s %s %s\r\n", method, filename, version);
+	sscanf(request, "%8s %s %8s\r\n", method, filename, version);
 	/* If method is GET, return NULL */
 	if (strcmp(method, "GET") != 0)
 		return 0;
@@ -299,9 +298,19 @@ int get_file_name(char *request, char *filename)
 /* Returns filetype based on file extension */
 enum filetype get_filetype(char *filename)
 {
-	char *ext = strchr(filename, '.');
-	ext = strchr(filename, '.');
-	ext++;
+	/* Find the last '.' in filename */
+	int i, len, found_dot;
+	len = strlen(filename);
+	for(i = len - 1; i > -1; i--) {
+		if (filename[i] == '.') {
+			found_dot = 1;
+			break;
+		}
+	}
+	if (!found_dot || i == 0 || i == len -1)
+		return UNKNOWN;
+	char *ext = filename + i + 1;
+	fflush(stdout);
 	if(strcmp(ext, "html") == 0)
 		return HTML;
 	else if(strcmp(ext, "css") == 0)
@@ -382,14 +391,13 @@ enum http_status handle_http_request(char *request, int *htmlfd, char **response
 	if(strcmp(filename, "/") == 0)
 		sprintf(filename, "/index.html");
 
-
 	sprintf(fullpath, "./%s%s", html_dir, filename);
-	if ((fd = open(fullpath, O_RDONLY))) {
+	if ((fd = open(fullpath, O_RDONLY)) < 0) {
+		return NOTFOUND;
+	} else {
 		*htmlfd = fd;
 		*response_header = get_response_header(filename);
 		return OK;
-	} else {
-		return NOTFOUND;
 	}
 }
 
