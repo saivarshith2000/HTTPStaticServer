@@ -276,7 +276,7 @@ int handle_stdin()
 	char input[8];
 	fgets(input, 7, stdin);
 	input[7] = '\0';
-	if(strcmp(input, "exit\n") == 0 || strcmp(input, "quit\n") == 0)
+	if(!strcmp(input, "exit\n") || !strcmp(input, "quit\n"))
 		return 1;
 	printf("Enter 'exit' or 'quit' (without quotes) to stop the server\n");
 	return 0;
@@ -491,10 +491,8 @@ pthread_t* create_threadpool(int poolsize, void *thread_func)
 {
 	pthread_t *workers = calloc(poolsize, sizeof(pthread_t));
 	int i;
-	int *arg;
+	int *arg = malloc(sizeof(int));
 	for(i = 0; i < poolsize; i++) {
-		arg = malloc(sizeof(int));
-		*arg = i;
 		if(pthread_create(&workers[i], NULL, thread_func, (void *)arg) < 0){
 			perror("Error in pthread_create()\n");
 			free(workers);
@@ -533,7 +531,6 @@ int main(int argc, char *argv[])
 	}
 	struct epoll_event stdin_event, listen_event;
 	stdin_event.events = EPOLLIN;
-	stdin_event.data.fd = STDIN_FILENO;
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &stdin_event) < 0) {
 		perror("error in epoll_ctl() for stdin_event\n");
 		close(listenfd);
@@ -585,12 +582,12 @@ int main(int argc, char *argv[])
 			perror("error in epoll_wait()\n");
 			break;
 		}
+
 		for(i = 0; i < event_count; i++) {
 			/* handle console input */
 			if (events[i].data.fd == STDIN_FILENO) {
-				if(handle_stdin()){
-					goto close_fds;
-				}
+				if(handle_stdin()) 
+					break;
 			} else {
 				/* handle new connection */
 				memset(&client_addr, 0, sizeof(client_addr));
@@ -608,28 +605,26 @@ int main(int argc, char *argv[])
 		}
 	}
 
-close_fds:
 	/* Close fds */
 	close(listenfd);
 	close(epollfd);
 
 	/* Clean up */
+	freequeue(connqueue);
 	printf("stopping server\n");
 	for(i = 0; i < threads; i++) {
 		pthread_cancel(workers[i]);
 	}
-	freequeue(connqueue);
 
 	/* Prints stats */
 	unsigned int total_wrote = 0;
 	unsigned int total_read = 0;
 	for(i = 0; i < threads; i++) {
-		printf("thread %u\twrote: %u\tread: %u\n", i, bytes_wrote[i], bytes_read[i]);
+		printf("thread %u:\twrote: %u\tread: %u\n", i, bytes_wrote[i], bytes_read[i]);
 		total_wrote += bytes_wrote[i];
 		total_read += bytes_read[i];
 	}
 	printf("Total bytes received: %u Bytes\nTotal bytes sent: %u Bytes\n", total_read, total_wrote);
 
-	/* Exit */
 	return EXIT_SUCCESS;
 }
