@@ -19,7 +19,8 @@
 
 a:link, a:visited, a:active{
     color: black;
-    padding: 20px;
+    margin: 10px;
+    padding: 10px;
     font-size: 18px;
     text-decoration: none;
     text-decoration: underline;
