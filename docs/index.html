@@ -59,7 +59,7 @@
             <p id="section-header">How does it work ?</p>
             <ol>
                 <li>The <code>main()</code> sets up a listening socket, a threadpool with 8 worker threads (default) and
-                    waits for incoming connections.</li>
+                    waits for incoming connections using epoll().</li>
                 <li>When a new connection arrives, it puts the client socket file descriptor in a queue and sends a
                     signal to the threadpool
                     using the <code>pthread_cond_wait()</code> method and forgets about it.</li>
