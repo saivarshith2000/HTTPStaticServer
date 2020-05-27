@@ -203,10 +203,10 @@ int parse_args(int argc, char *argv[], int *port, int *threads, char **html_dir)
 				break;
 			case 'h':
 				printf(HELPSTRING, argv[0]);
-				return 0;
+				return -1;
 			default:
 				printf("Invalid usage. Try -h for help\n");
-				exit(EXIT_FAILURE);
+				return -1;
 		}
 	}
 	return 1;
@@ -510,8 +510,8 @@ int main(int argc, char *argv[])
 	html_dir = DEFAULT_STATIC;
 
 	/* Parse arguments */
-	if(!parse_args(argc, argv, &port, &threads, &html_dir))
-		exit(EXIT_FAILURE);
+	if(parse_args(argc, argv, &port, &threads, &html_dir) == -1)
+		return EXIT_SUCCESS;
 
 	/* check static directory */
 	if(!check_html_dir())
