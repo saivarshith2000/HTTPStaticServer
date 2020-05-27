@@ -206,7 +206,6 @@ int parse_args(int argc, char *argv[], int *port, int *threads, char **html_dir)
 				return 0;
 			default:
 				printf("Invalid usage. Try -h for help\n");
-				return 0;
 				exit(EXIT_FAILURE);
 		}
 	}
